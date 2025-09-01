@@ -16,25 +16,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, Search, Upload, LogOut, User, Phone, Globe, MessageSquare, Database, Eye, EyeOff, Camera } from "lucide-react";
+import { CalendarIcon, Search, Upload, LogOut, User, Phone, Globe, MessageSquare, Database, Eye, EyeOff, Camera, Shield, Clock } from "lucide-react";
 
 // Import new components
 import FaceAuth from './components/FaceAuth';
 import SignUp from './components/SignUp';
+import DigiLockerAuth from './components/DigiLockerAuth';
+import Marquee from './components/Marquee';
+import { ThemeProvider } from './components/ThemeProvider';
+import ThemeToggle from './components/ThemeToggle';
 import IPTracker from './components/IPTracker';
 import CameraTest from './components/CameraTest';
 import SimpleCameraFeed from './components/SimpleCameraFeed';
 
+// Import auth service
+import { authService } from './services/authService';
+
 // Mock API functions
 const mockAPI = {
-  login: async (username: string, password: string) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (username === 'admin' && password === 'password') {
-      return { username, role: 'analyst' };
-    }
-    throw new Error('Invalid credentials');
-  },
-
   uploadFile: async (file: File) => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     return {
@@ -312,7 +311,7 @@ const Login: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showFaceAuth, setShowFaceAuth] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'credentials' | 'face' | 'digilocker'>('credentials');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,10 +319,10 @@ const Login: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
     setError('');
 
     try {
-      const user = await mockAPI.login(username, password);
-      onLogin(user);
-    } catch (err) {
-      setError('Invalid username or password');
+      const result = await authService.login(username, password);
+      onLogin(result.user);
+    } catch (err: any) {
+      setError(err.message || 'Invalid username or password');
     } finally {
       setLoading(false);
     }
@@ -339,73 +338,81 @@ const Login: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
     setError(`Face authentication failed: ${error}`);
   };
 
+  const handleDigiLockerSuccess = (user: any) => {
+    onLogin(user);
+  };
+
+  const handleDigiLockerError = (error: string) => {
+    setError(`DigiLocker authentication failed: ${error}`);
+  };
+
+  const marqueeMessages = [
+    "Automate complex data analysis. Identify and map communication between individuals with ease.",
+    "Detect fraudulent activity like SIM box fraud and phishing with AetherTrace's intelligent algorithms.",
+    "Maximum security guaranteed. We use a Zero Trust model with encrypted data at every stage."
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">IPDR Analysis System</CardTitle>
-          <p className="text-gray-600">Secure Login</p>
-        </CardHeader>
-        <CardContent>
-          {!showFaceAuth ? (
-            <div className="space-y-4">
-              <Tabs defaultValue="credentials" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="credentials">Credentials</TabsTrigger>
-                  <TabsTrigger value="face">Face Auth</TabsTrigger>
-                </TabsList>
+    <div className="min-h-screen bg-background">
+      {/* Marquee at the top */}
+      <Marquee messages={marqueeMessages} speed={30} />
 
-                <TabsContent value="credentials" className="space-y-4">
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Username</label>
-                      <Input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Enter username"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Password</label>
-                      <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password"
-                        required
-                      />
-                    </div>
-                    {error && (
-                      <div className="text-red-600 text-sm text-center">{error}</div>
-                    )}
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? 'Logging in...' : 'Login'}
-                    </Button>
-                  </form>
-                </TabsContent>
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] py-8">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">IPDR Analysis System</CardTitle>
+            <p className="text-gray-600">Secure Login</p>
+          </CardHeader>
+          <CardContent>
+          <Tabs value={authMethod} onValueChange={(value) => setAuthMethod(value as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="credentials">Credentials</TabsTrigger>
+              <TabsTrigger value="face">Face Auth</TabsTrigger>
+              <TabsTrigger value="digilocker">DigiLocker</TabsTrigger>
+            </TabsList>
 
-                <TabsContent value="face" className="space-y-4">
-                  <FaceAuth onAuthSuccess={handleFaceAuthSuccess} onAuthError={handleFaceAuthError} />
-                </TabsContent>
-              </Tabs>
-
-              <div className="text-center">
-                <Button 
-                  variant="link" 
-                  onClick={() => setShowFaceAuth(!showFaceAuth)}
-                  className="text-sm"
-                >
-                  {showFaceAuth ? 'Use credentials instead' : 'Try face authentication'}
+            <TabsContent value="credentials" className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Username</label>
+                  <Input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Password</label>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+                {error && (
+                  <div className="text-red-600 text-sm text-center">{error}</div>
+                )}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Logging in...' : 'Login'}
                 </Button>
-              </div>
-            </div>
-          ) : (
-            <FaceAuth onAuthSuccess={handleFaceAuthSuccess} onAuthError={handleFaceAuthError} />
-          )}
+              </form>
+            </TabsContent>
+
+            <TabsContent value="face" className="space-y-4">
+              <FaceAuth onAuthSuccess={handleFaceAuthSuccess} onAuthError={handleFaceAuthError} />
+            </TabsContent>
+
+            <TabsContent value="digilocker" className="space-y-4">
+              <DigiLockerAuth onAuthSuccess={handleDigiLockerSuccess} onAuthError={handleDigiLockerError} />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
@@ -423,6 +430,11 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
   const [activeTab, setActiveTab] = useState('graph');
   const [userIP, setUserIP] = useState('');
   const [userLocation, setUserLocation] = useState('');
+  const [loginLogs, setLoginLogs] = useState<any[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [tokenExpiry, setTokenExpiry] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Get user IP and location
   useEffect(() => {
@@ -434,7 +446,7 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
 
         const locationResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
         const locationData = await locationResponse.json();
-        
+
         if (locationData.city && locationData.country_name) {
           setUserLocation(`${locationData.city}, ${locationData.country_name}`);
         }
@@ -445,7 +457,83 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
 
     getUserInfo();
     loadData();
+    loadLoginLogs();
   }, []);
+
+  const loadLoginLogs = async () => {
+    try {
+      const logs = await authService.getLoginLogs();
+      setLoginLogs(logs);
+    } catch (error) {
+      console.error('Error loading login logs:', error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await authService.deleteAccount();
+      onLogout();
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      alert('Failed to delete account: ' + error.message);
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Check token expiry and setup refresh
+  useEffect(() => {
+    const checkTokenExpiry = () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+      
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        const expiryTime = decoded.exp * 1000; // Convert to milliseconds
+        setTokenExpiry(new Date(expiryTime));
+        
+        // Auto-refresh token 5 minutes before expiry
+        const timeUntilExpiry = expiryTime - Date.now();
+        const refreshThreshold = 5 * 60 * 1000;
+        
+        if (timeUntilExpiry <= refreshThreshold && timeUntilExpiry > 0) {
+          console.log('Token expiring soon, refreshing...');
+          refreshToken();
+        }
+      } catch (error) {
+        console.error('Error checking token expiry:', error);
+      }
+    };
+
+    const refreshToken = async () => {
+      setIsRefreshing(true);
+      try {
+        await authService.refreshToken();
+        checkTokenExpiry(); // Update expiry time after refresh
+      } catch (error) {
+        console.error('Failed to refresh token:', error);
+        // If refresh fails, logout user
+        onLogout();
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+
+    // Check token expiry every minute
+    const interval = setInterval(checkTokenExpiry, 60 * 1000);
+    
+    // Initial check
+    checkTokenExpiry();
+    
+    return () => clearInterval(interval);
+  }, [onLogout]);
 
   const loadData = async () => {
     setLoading(true);
@@ -500,22 +588,83 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <nav className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">IPDR Analysis System</h1>
+              <h1 className="text-xl font-semibold text-foreground">IPDR Analysis System</h1>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700">{user.username}</span>
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-foreground">{user.username}</span>
               </div>
-              <Button variant="outline" size="sm" onClick={onLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              
+              {/* Token Status */}
+              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {tokenExpiry && (
+                  <span>
+                    {tokenExpiry > new Date() ? 'Valid' : 'Expired'}
+                  </span>
+                )}
+              </div>
+
+              {/* Refresh Status */}
+              {isRefreshing && (
+                <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                  <span>Refreshing...</span>
+                </div>
+              )}
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveTab('logs')}
+                  className="text-xs"
+                >
+                  View Logs
+                </Button>
+                {!showDeleteConfirm ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-xs"
+                  >
+                    Delete Account
+                  </Button>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-red-600">Confirm delete?</span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteAccount}
+                      disabled={deleteLoading}
+                      className="text-xs"
+                    >
+                      {deleteLoading ? 'Deleting...' : 'Yes'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="text-xs"
+                    >
+                      No
+                    </Button>
+                  </div>
+                )}
+                <ThemeToggle />
+                <Button variant="outline" size="sm" onClick={onLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -699,7 +848,7 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
               </CardHeader>
               <CardContent>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="graph" className="flex items-center">
                       <Globe className="h-4 w-4 mr-2" />
                       Network
@@ -715,6 +864,10 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
                     <TabsTrigger value="camera" className="flex items-center">
                       <Camera className="h-4 w-4 mr-2" />
                       Camera Test
+                    </TabsTrigger>
+                    <TabsTrigger value="logs" className="flex items-center">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Login Logs
                     </TabsTrigger>
                   </TabsList>
 
@@ -764,6 +917,96 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
                   <TabsContent value="camera" className="mt-6">
                     <SimpleCameraFeed />
                   </TabsContent>
+
+                  <TabsContent value="logs" className="mt-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <Shield className="h-5 w-5 mr-2" />
+                          Login Activity Logs
+                        </CardTitle>
+                        <p className="text-sm text-gray-600">
+                          All authentication attempts and account activities
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {loginLogs.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                              <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                              <p>No login logs available</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                              {loginLogs.map((log, index) => (
+                                <div
+                                  key={log.id || index}
+                                  className={`p-4 rounded-lg border ${
+                                    log.success
+                                      ? 'bg-green-50 border-green-200'
+                                      : 'bg-red-50 border-red-200'
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center space-x-2 mb-2">
+                                        <Badge
+                                          variant={log.success ? 'default' : 'destructive'}
+                                          className="text-xs"
+                                        >
+                                          {log.action?.toUpperCase() || 'LOGIN'}
+                                        </Badge>
+                                        <span className="text-sm font-medium">
+                                          {log.success ? 'Success' : 'Failed'}
+                                        </span>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                          <span className="font-medium">User:</span>{' '}
+                                          {log.userId === 'unknown' ? 'Unknown' : log.userId}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">Time:</span>{' '}
+                                          {new Date(log.timestamp).toLocaleString()}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">IP:</span>{' '}
+                                          {log.ipAddress || 'Unknown'}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">Location:</span>{' '}
+                                          {log.location || 'Unknown'}
+                                        </div>
+                                      </div>
+
+                                      {log.reason && (
+                                        <div className="mt-2 text-sm text-red-600">
+                                          <span className="font-medium">Reason:</span> {log.reason}
+                                        </div>
+                                      )}
+
+                                      {log.details && (
+                                        <div className="mt-2 text-sm text-gray-600">
+                                          <span className="font-medium">Details:</span> {log.details}
+                                        </div>
+                                      )}
+
+                                      {log.failedAttempts && (
+                                        <div className="mt-2 text-sm text-orange-600">
+                                          <span className="font-medium">Failed Attempts:</span> {log.failedAttempts}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
@@ -779,12 +1022,34 @@ const App = () => {
   const [user, setUser] = useState<any>(null);
   const [queryClient] = useState(() => new QueryClient());
   const [showSignUp, setShowSignUp] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Check for existing authentication on app load
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // Clear invalid tokens
+        await authService.logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const handleLogin = (userData: any) => {
     setUser(userData);
   };
 
   const handleLogout = () => {
+    authService.logout();
     setUser(null);
   };
 
@@ -796,40 +1061,53 @@ const App = () => {
     setShowSignUp(false);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router>
-          <div className="min-h-screen">
-            {!user ? (
-              <div>
-                {showSignUp ? (
-                  <SignUp 
-                    onSignUp={handleSignUp} 
-                    onLogin={handleLogin}
-                    onSwitchToLogin={handleSwitchToLogin}
-                  />
-                ) : (
-                  <Login onLogin={handleLogin} />
-                )}
-                <div className="fixed bottom-4 right-4">
-                  <Button 
-                    onClick={() => setShowSignUp(!showSignUp)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {showSignUp ? 'Back to Login' : 'Create Account'}
-                  </Button>
+      <ThemeProvider defaultTheme="system" storageKey="aether-trace-theme">
+        <TooltipProvider>
+          <Router>
+            <div className="min-h-screen bg-background text-foreground">
+              {!user ? (
+                <div>
+                  {showSignUp ? (
+                    <SignUp
+                      onSignUp={handleSignUp}
+                      onLogin={handleLogin}
+                      onSwitchToLogin={handleSwitchToLogin}
+                    />
+                  ) : (
+                    <Login onLogin={handleLogin} />
+                  )}
+                  <div className="fixed bottom-4 right-4 flex gap-2">
+                    <Button
+                      onClick={() => setShowSignUp(!showSignUp)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {showSignUp ? 'Back to Login' : 'Create Account'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Dashboard user={user} onLogout={handleLogout} />
-            )}
-          </div>
-        </Router>
-        <Toaster />
-        <Sonner />
-      </TooltipProvider>
+              ) : (
+                <Dashboard user={user} onLogout={handleLogout} />
+              )}
+            </div>
+          </Router>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

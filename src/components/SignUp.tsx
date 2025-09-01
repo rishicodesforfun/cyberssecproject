@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, Shield, MapPin, User, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Shield, MapPin, User, Mail, Lock, AlertTriangle } from "lucide-react";
+import { checkPasswordStrength } from "@/lib/auth";
+import { authService, isValidEmail, isValidUsername } from "@/services/authService";
+import Marquee from "./Marquee";
 
 interface SignUpProps {
   onSignUp: (userData: any) => void;
@@ -30,6 +33,11 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
   const [success, setSuccess] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [location, setLocation] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState<{
+    score: number;
+    strength: 'weak' | 'fair' | 'good' | 'strong';
+    feedback: string[];
+  } | null>(null);
 
   // Get user IP and location
   useEffect(() => {
@@ -61,6 +69,12 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
       ...prev,
       [name]: value
     }));
+
+    // Check password strength when password changes
+    if (name === 'password') {
+      const strength = checkPasswordStrength(value);
+      setPasswordStrength(strength);
+    }
   };
 
   const validateForm = () => {
@@ -79,9 +93,19 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    // Check password strength
+    if (passwordStrength && passwordStrength.strength === 'weak') {
+      setError('Password is too weak. Please choose a stronger password.');
+      return false;
+    }
+
+    if (!isValidEmail(formData.email)) {
       setError('Please enter a valid email address');
+      return false;
+    }
+
+    if (!isValidUsername(formData.username)) {
+      setError('Username must be 3-20 characters long and can only contain letters, numbers, and underscores');
       return false;
     }
 
@@ -98,24 +122,21 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
     setLoading(true);
 
     try {
-      // Simulate API call to register user
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simulate storing user data with IP and location
+      // Register user using backend API
       const userData = {
         username: formData.username,
         email: formData.email,
+        password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
         ipAddress: ipAddress,
-        location: location,
-        registrationDate: new Date().toISOString(),
-        role: 'user'
+        location: location
       };
 
-      console.log('User registration data:', userData);
+      // Call backend registration API
+      const result = await authService.register(userData);
       
-      setSuccess('Registration successful! Please login with your credentials.');
+      setSuccess('Registration successful! Logging you in...');
       
       // Clear form after successful registration
       setFormData({
@@ -126,23 +147,34 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
         firstName: '',
         lastName: ''
       });
+      setPasswordStrength(null);
 
-      // Auto-redirect to login after 2 seconds
+      // Auto-login after successful registration
       setTimeout(() => {
-        onLogin(userData);
-      }, 2000);
+        onLogin(result.user);
+      }, 1500);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      setError('Registration failed. Please try again.');
+      setError(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const marqueeMessages = [
+    "Automate complex data analysis. Identify and map communication between individuals with ease.",
+    "Detect fraudulent activity like SIM box fraud and phishing with AetherTrace's intelligent algorithms.",
+    "Maximum security guaranteed. We use a Zero Trust model with encrypted data at every stage."
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-background p-4">
+      {/* Marquee at the top */}
+      <Marquee messages={marqueeMessages} speed={30} />
+
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] py-8">
+        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
           <p className="text-gray-600">Join our IPDR Analysis System</p>
@@ -267,6 +299,44 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
                   </div>
                 </div>
 
+                {/* Password Strength Indicator */}
+                {passwordStrength && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Password Strength</label>
+                      <Badge
+                        variant={
+                          passwordStrength.strength === 'strong' ? 'default' :
+                          passwordStrength.strength === 'good' ? 'secondary' :
+                          passwordStrength.strength === 'fair' ? 'outline' : 'destructive'
+                        }
+                        className="text-xs"
+                      >
+                        {passwordStrength.strength.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          passwordStrength.strength === 'strong' ? 'bg-green-500 w-full' :
+                          passwordStrength.strength === 'good' ? 'bg-blue-500 w-3/4' :
+                          passwordStrength.strength === 'fair' ? 'bg-yellow-500 w-1/2' : 'bg-red-500 w-1/4'
+                        }`}
+                      ></div>
+                    </div>
+                    {passwordStrength.feedback.length > 0 && (
+                      <div className="text-xs text-gray-600 space-y-1">
+                        {passwordStrength.feedback.map((feedback, index) => (
+                          <div key={index} className="flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1 text-yellow-500" />
+                            {feedback}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* IP and Location Info */}
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
@@ -317,6 +387,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSignUp, onLogin, onSwitchToLogin }) =
           </Tabs>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

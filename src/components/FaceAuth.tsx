@@ -119,55 +119,59 @@ const FaceAuth: React.FC<FaceAuthProps> = ({ onAuthSuccess, onAuthError }) => {
         video.muted = true;
         video.playsInline = true;
         video.autoplay = true;
-        
+
         // Set stream first
         setStream(mediaStream);
-        
+
+        // Clear any existing source
+        video.srcObject = null;
+
+        // Set the stream to video element
+        video.srcObject = mediaStream;
+
         // Create a promise to handle video setup
         const setupVideo = new Promise<void>((resolve, reject) => {
           const onLoadedMetadata = () => {
             console.log('Video metadata loaded, dimensions:', video.videoWidth, 'x', video.videoHeight);
             video.removeEventListener('loadedmetadata', onLoadedMetadata);
             video.removeEventListener('error', onError);
-            
+
             // Now set camera as active
             setIsCameraActive(true);
-            
+
             // Try to play
             const playPromise = video.play();
             if (playPromise !== undefined) {
               playPromise.then(() => {
                 console.log('Video playing successfully');
                 resolve();
-              }).catch((error) => {
-                console.error('Error playing video:', error);
-                // Still resolve as camera is active
+              }).catch((playError) => {
+                console.error('Error playing video:', playError);
+                // Still resolve as camera is active, but show message about autoplay
+                setCameraError('Video loaded but autoplay was prevented. Click on the video to enable playback.');
                 resolve();
               });
             } else {
               resolve();
             }
           };
-          
+
           const onError = (error: Event) => {
             console.error('Video error:', error);
             video.removeEventListener('loadedmetadata', onLoadedMetadata);
             video.removeEventListener('error', onError);
             reject(error);
           };
-          
+
           video.addEventListener('loadedmetadata', onLoadedMetadata);
           video.addEventListener('error', onError);
-          
-          // Set the stream to video element
-          video.srcObject = mediaStream;
-          
+
           // If metadata is already loaded
           if (video.readyState >= 1) {
             onLoadedMetadata();
           }
         });
-        
+
         await setupVideo;
         console.log('Camera started successfully');
       }
@@ -180,17 +184,21 @@ const FaceAuth: React.FC<FaceAuthProps> = ({ onAuthSuccess, onAuthError }) => {
       }));
       
       let errorMessage = 'Could not access the camera.';
-      
+
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+        errorMessage = 'Camera permission denied. Please click "Allow" when prompted, or enable camera permissions in your browser settings.';
       } else if (error.name === 'NotFoundError') {
         errorMessage = 'No camera found on this device.';
       } else if (error.name === 'NotReadableError') {
         errorMessage = 'Camera is already in use by another application.';
       } else if (error.name === 'OverconstrainedError') {
         errorMessage = 'Camera constraints not supported.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Camera access is not supported in this browser or requires HTTPS. Try using Chrome, Firefox, or Edge.';
+      } else {
+        errorMessage = `Camera error: ${error.message || 'Unknown error'}`;
       }
-      
+
       setCameraError(errorMessage);
       onAuthError(errorMessage);
     }
@@ -320,6 +328,16 @@ const FaceAuth: React.FC<FaceAuthProps> = ({ onAuthSuccess, onAuthError }) => {
               onPlay={() => {
                 console.log('Video started playing');
               }}
+              onError={(e) => {
+                console.error('Video error:', e);
+                setCameraError('Video playback error. Try refreshing the page.');
+              }}
+              onClick={() => {
+                // Handle autoplay issues - try to play on user interaction
+                if (videoRef.current && videoRef.current.paused) {
+                  videoRef.current.play().catch(console.error);
+                }
+              }}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
@@ -430,6 +448,8 @@ const FaceAuth: React.FC<FaceAuthProps> = ({ onAuthSuccess, onAuthError }) => {
           <p>• Ensure your device has a working camera</p>
           <p>• Check if another app is using the camera</p>
           <p>• Refresh the page if permissions were denied</p>
+          <p>• For production: Camera requires HTTPS (secure connection)</p>
+          <p>• For development: Some browsers allow HTTP localhost</p>
         </div>
       </CardContent>
     </Card>

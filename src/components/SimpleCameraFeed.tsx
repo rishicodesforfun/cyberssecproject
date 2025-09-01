@@ -25,27 +25,76 @@ const SimpleCameraFeed: React.FC = () => {
     stopMediaTracks(currentStream);
 
     try {
+      console.log('Requesting camera access...');
       // Request access to the user's camera - exactly like HTML
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           // Request a higher resolution for better quality
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        }, 
+        },
         audio: false // We don't need audio for this app
       });
 
+      console.log('Camera access granted, setting up video...');
       setCurrentStream(stream);
-      
+
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+
+        // Clear any existing source
+        video.srcObject = null;
+
+        // Set up video element properties
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = true;
+
+        // Set the stream
+        video.srcObject = stream;
+
+        // Try to play the video
+        try {
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+            console.log('Video started playing successfully');
+            setIsActive(true);
+          } else {
+            console.log('Video play promise undefined, setting active');
+            setIsActive(true);
+          }
+        } catch (playError) {
+          console.error('Error playing video:', playError);
+          // Still set as active since we have the stream
+          setIsActive(true);
+          setError('Video loaded but autoplay was prevented. Click anywhere on the page to enable video.');
+        }
+      } else {
+        console.error('Video element not found');
+        setError('Video element not found');
       }
-      
-      setIsActive(true);
 
     } catch (err: any) {
       console.error("Error accessing the camera: ", err);
-      setError('Could not access the camera. Please ensure you have a camera connected and have granted permission in your browser.');
+
+      let errorMessage = 'Could not access the camera.';
+
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Camera permission denied. Please click "Allow" when prompted, or enable camera permissions in your browser settings.';
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = 'No camera found. Please ensure you have a camera connected.';
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = 'Camera is already in use by another application.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage = 'Camera does not support the requested settings.';
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage = 'Camera access is not supported in this browser or requires HTTPS. Try using Chrome, Firefox, or Edge.';
+      } else {
+        errorMessage = `Camera error: ${err.message || 'Unknown error'}`;
+      }
+
+      setError(errorMessage);
     }
   };
 
@@ -84,12 +133,38 @@ const SimpleCameraFeed: React.FC = () => {
 
         {/* Video container */}
         <div className="relative bg-black aspect-video">
-          <video 
+          <video
             ref={videoRef}
             autoPlay
             playsInline
+            muted
             className="w-full h-full object-cover"
-            style={{ display: isActive ? 'block' : 'none' }}
+            style={{
+              display: isActive ? 'block' : 'none',
+              backgroundColor: '#000'
+            }}
+            onLoadedMetadata={() => {
+              console.log('Video metadata loaded');
+              if (videoRef.current) {
+                console.log('Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+              }
+            }}
+            onCanPlay={() => {
+              console.log('Video can play');
+            }}
+            onPlay={() => {
+              console.log('Video started playing');
+            }}
+            onError={(e) => {
+              console.error('Video error:', e);
+              setError('Video playback error. Try refreshing the page.');
+            }}
+            onClick={() => {
+              // Handle autoplay issues - try to play on user interaction
+              if (videoRef.current && videoRef.current.paused) {
+                videoRef.current.play().catch(console.error);
+              }
+            }}
           />
           
           {!isActive && (
@@ -133,7 +208,13 @@ const SimpleCameraFeed: React.FC = () => {
         {error && (
           <div className="p-4 m-6 bg-red-900/50 border border-red-700 rounded-lg text-center">
             <p className="font-medium">Could not access the camera.</p>
-            <p className="text-sm text-red-300">Please ensure you have a camera connected and have granted permission in your browser.</p>
+            <p className="text-sm text-red-300 mb-2">{error}</p>
+            <div className="text-xs text-red-400 space-y-1">
+              <p>• Check browser camera permissions</p>
+              <p>• Try Chrome, Firefox, or Edge</p>
+              <p>• For development: Some browsers allow HTTP localhost</p>
+              <p>• For production: Requires HTTPS connection</p>
+            </div>
           </div>
         )}
       </div>
