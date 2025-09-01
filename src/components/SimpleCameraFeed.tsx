@@ -120,19 +120,19 @@ const SimpleCameraFeed: React.FC = () => {
 
   return (
     <div className="w-full max-w-4xl p-4 sm:p-6 md:p-8 mx-auto">
-      <div className="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="p-6 border-b border-gray-700 flex flex-col sm:flex-row justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-400 mb-2 sm:mb-0">Live Camera Feed</h1>
+      <div className="rounded-2xl shadow-2xl overflow-hidden border border-border">
+        <div className="p-6 border-b border-border flex flex-col sm:flex-row justify-between items-center">
+          <h1 className="text-2xl font-bold mb-2 sm:mb-0">Live Camera Feed</h1>
           {isActive && (
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-gray-300">LIVE</span>
+              <span className="text-sm font-medium">LIVE</span>
             </div>
           )}
         </div>
 
         {/* Video container */}
-        <div className="relative bg-black aspect-video">
+        <div className="relative aspect-video bg-muted">
           <video
             ref={videoRef}
             autoPlay
@@ -168,18 +168,18 @@ const SimpleCameraFeed: React.FC = () => {
           />
           
           {!isActive && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
               <svg className="w-16 h-16 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" />
               </svg>
               <p className="text-lg">Your camera feed will appear here</p>
-              <p className="text-sm text-gray-500">Click the button below to start</p>
+              <p className="text-sm">Click the button below to start</p>
             </div>
           )}
         </div>
 
         {/* Controls */}
-        <div className="p-6 bg-gray-800/50 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+        <div className="p-6 bg-muted/50 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
           {!isActive ? (
             <Button 
               onClick={startCamera}
@@ -206,10 +206,10 @@ const SimpleCameraFeed: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="p-4 m-6 bg-red-900/50 border border-red-700 rounded-lg text-center">
+          <div className="p-4 m-6 rounded-lg text-center border-destructive/50 bg-destructive/10">
             <p className="font-medium">Could not access the camera.</p>
-            <p className="text-sm text-red-300 mb-2">{error}</p>
-            <div className="text-xs text-red-400 space-y-1">
+            <p className="text-sm mb-2">{error}</p>
+            <div className="text-xs space-y-1">
               <p>• Check browser camera permissions</p>
               <p>• Try Chrome, Firefox, or Edge</p>
               <p>• For development: Some browsers allow HTTP localhost</p>

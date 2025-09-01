@@ -240,7 +240,7 @@ const CameraTest: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative bg-gray-900 rounded-lg overflow-hidden video-container" style={{ height: '200px' }}>
+        <div className="relative rounded-lg overflow-hidden video-container border border-border" style={{ height: '200px' }}>
           {cameraError ? (
             <div className="flex items-center justify-center h-full text-red-500">
               <div className="text-center">
@@ -262,7 +262,7 @@ const CameraTest: React.FC = () => {
               }}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="text-center">
                 <Camera className="h-8 w-8 mx-auto mb-2" />
                 <p>Camera not active</p>
@@ -287,18 +287,18 @@ const CameraTest: React.FC = () => {
         </div>
 
         {/* Debug Information */}
-        <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded-lg">
+        <div className="text-xs text-muted-foreground space-y-1 bg-muted p-3 rounded-lg">
           <div className="flex items-center mb-2">
             <Info className="h-3 w-3 mr-1" />
             <span className="font-medium">Debug Information:</span>
           </div>
-          <p>Browser: {debugInfo.browser}</p>
-          <p>Camera Permissions: {debugInfo.permissions}</p>
-          <p>Camera Devices: {debugInfo.cameraDevices}</p>
-          <p>Camera Status: {isCameraActive ? 'Active' : 'Inactive'}</p>
-          <p>Stream: {stream ? 'Available' : 'None'}</p>
+          <p className="text-muted-foreground">Browser: {debugInfo.browser}</p>
+          <p className="text-muted-foreground">Camera Permissions: {debugInfo.permissions}</p>
+          <p className="text-muted-foreground">Camera Devices: {debugInfo.cameraDevices}</p>
+          <p className="text-muted-foreground">Camera Status: {isCameraActive ? 'Active' : 'Inactive'}</p>
+          <p className="text-muted-foreground">Stream: {stream ? 'Available' : 'None'}</p>
           {debugInfo.errorDetails && (
-            <p className="text-red-600">Error: {debugInfo.errorDetails}</p>
+            <p className="text-destructive">Error: {debugInfo.errorDetails}</p>
           )}
         </div>
       </CardContent>

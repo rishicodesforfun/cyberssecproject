@@ -163,7 +163,7 @@ const NetworkGraph: React.FC<{ data: any }> = ({ data }) => {
       .selectAll("line")
       .data(data.links)
       .enter().append("line")
-      .attr("stroke", "#999")
+      .attr("stroke", "hsl(var(--muted-foreground))")
       .attr("stroke-opacity", 0.6)
       .attr("stroke-width", (d: any) => Math.sqrt(d.weight) * 2);
 
@@ -172,8 +172,8 @@ const NetworkGraph: React.FC<{ data: any }> = ({ data }) => {
       .data(data.nodes)
       .enter().append("circle")
       .attr("r", (d: any) => Math.sqrt(d.calls) * 2 + 5)
-      .attr("fill", (d: any) => d.type === 'phone' ? '#3b82f6' : '#10b981')
-      .attr("stroke", "#fff")
+      .attr("fill", (d: any) => d.type === 'phone' ? 'hsl(var(--primary))' : 'hsl(var(--secondary))')
+      .attr("stroke", "hsl(var(--border))")
       .attr("stroke-width", 2)
       .style("cursor", "pointer")
       .on("click", (event, d) => {
@@ -203,7 +203,7 @@ const NetworkGraph: React.FC<{ data: any }> = ({ data }) => {
       .attr("font-size", "12px")
       .attr("dx", 15)
       .attr("dy", 4)
-      .style("fill", "#333")
+      .style("fill", "hsl(var(--foreground))")
       .style("pointer-events", "none");
 
     simulation.on("tick", () => {
@@ -229,7 +229,7 @@ const NetworkGraph: React.FC<{ data: any }> = ({ data }) => {
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg p-4 bg-white">
+      <div className="border rounded-lg p-4 bg-card">
         {!d3Loaded ? (
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
@@ -276,25 +276,25 @@ const TimelineView: React.FC<{ data: any[] }> = ({ data }) => {
   return (
     <div className="space-y-4">
       <div className="relative">
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
         
         {sortedData.map((record, index) => (
           <div key={record.id} className="relative flex items-start space-x-4 pb-6">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center z-10">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
+            <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center z-10">
+              <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
             </div>
             
-            <div className="flex-1 bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex-1 bg-card p-4 rounded-lg shadow-sm border border-border">
               <div className="flex justify-between items-start mb-2">
                 <div className="font-medium">{record.aParty} → {record.bParty}</div>
                 <Badge variant={record.communicationType === 'VOICE' ? 'default' : record.communicationType === 'SMS' ? 'secondary' : 'outline'}>
                   {record.communicationType}
                 </Badge>
               </div>
-              <div className="text-sm text-gray-600 mb-2">
+              <div className="text-sm text-muted-foreground mb-2">
                 {new Date(record.timestamp).toLocaleString()}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-muted-foreground">
                 IP: {record.publicIP} | Duration: {record.duration}s | Bytes: {record.bytes.toLocaleString()}
               </div>
             </div>
@@ -361,7 +361,7 @@ const Login: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">IPDR Analysis System</CardTitle>
-            <p className="text-gray-600">Secure Login</p>
+            <p className="text-muted-foreground">Secure Login</p>
           </CardHeader>
           <CardContent>
           <Tabs value={authMethod} onValueChange={(value) => setAuthMethod(value as any)} className="w-full">
@@ -394,7 +394,7 @@ const Login: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
                   />
                 </div>
                 {error && (
-                  <div className="text-red-600 text-sm text-center">{error}</div>
+                  <div className="text-destructive text-sm text-center">{error}</div>
                 )}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Logging in...' : 'Login'}
@@ -841,7 +841,7 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Data Analysis</CardTitle>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-muted-foreground">
                     {filteredData.length} records found
                   </div>
                 </div>
@@ -932,10 +932,10 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
                       <CardContent>
                         <div className="space-y-4">
                           {loginLogs.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
-                              <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                              <p>No login logs available</p>
-                            </div>
+                            <div className="text-center py-8 text-muted-foreground">
+                            <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No login logs available</p>
+                          </div>
                           ) : (
                             <div className="space-y-3 max-h-96 overflow-y-auto">
                               {loginLogs.map((log, index) => (
@@ -943,8 +943,8 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
                                   key={log.id || index}
                                   className={`p-4 rounded-lg border ${
                                     log.success
-                                      ? 'bg-green-50 border-green-200'
-                                      : 'bg-red-50 border-red-200'
+                                      ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
+                                      : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
                                   }`}
                                 >
                                   <div className="flex items-start justify-between">
@@ -981,19 +981,19 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLogo
                                       </div>
 
                                       {log.reason && (
-                                        <div className="mt-2 text-sm text-red-600">
+                                        <div className="mt-2 text-sm text-destructive">
                                           <span className="font-medium">Reason:</span> {log.reason}
                                         </div>
                                       )}
 
                                       {log.details && (
-                                        <div className="mt-2 text-sm text-gray-600">
+                                        <div className="mt-2 text-sm text-muted-foreground">
                                           <span className="font-medium">Details:</span> {log.details}
                                         </div>
                                       )}
 
                                       {log.failedAttempts && (
-                                        <div className="mt-2 text-sm text-orange-600">
+                                        <div className="mt-2 text-sm text-orange-600 dark:text-orange-400">
                                           <span className="font-medium">Failed Attempts:</span> {log.failedAttempts}
                                         </div>
                                       )}
@@ -1063,10 +1063,10 @@ const App = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
